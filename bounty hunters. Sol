@@ -1,0 +1,62 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract BountyBoard {
+
+    // Structure to store a task
+    struct Task {
+        uint256 id;
+        string description;
+        uint256 reward;
+        address payable assignee;
+        bool completed;
+    }
+
+    // State variables
+    uint256 public taskCount;
+    mapping(uint256 => Task) public tasks;
+
+    // Event to log new tasks
+    event TaskCreated(uint256 taskId, string description, uint256 reward);
+    event TaskCompleted(uint256 taskId, address assignee);
+
+    // Function to create a task with a predefined reward
+    function createTask(string memory _description, uint256 _reward) public {
+        taskCount++;
+        tasks[taskCount] = Task(taskCount, _description, _reward, payable(address(0)), false);
+        emit TaskCreated(taskCount, _description, _reward);
+    }
+
+    // Function to assign a task to an address
+    function assignTask(uint256 _taskId, address payable _assignee) public {
+        require(_taskId > 0 && _taskId <= taskCount, "Task does not exist.");
+        Task storage task = tasks[_taskId];
+        require(task.assignee == address(0), "Task already assigned.");
+        task.assignee = _assignee;
+    }
+
+    // Function to mark a task as completed and transfer the reward
+    function completeTask(uint256 _taskId) public {
+        require(_taskId > 0 && _taskId <= taskCount, "Task does not exist.");
+        Task storage task = tasks[_taskId];
+        require(task.assignee == msg.sender, "Only the assignee can complete the task.");
+        require(!task.completed, "Task already completed.");
+        
+        task.completed = true;
+        task.assignee.transfer(task.reward);
+        emit TaskCompleted(_taskId, msg.sender);
+    }
+
+    // Function to check if a task is completed
+    function isTaskCompleted(uint256 _taskId) public view returns (bool) {
+        require(_taskId > 0 && _taskId <= taskCount, "Task does not exist.");
+        return tasks[_taskId].completed;
+    }
+
+    // Function to get task details
+    function getTaskDetails(uint256 _taskId) public view returns (string memory description, uint256 reward, address assignee, bool completed) {
+        require(_taskId > 0 && _taskId <= taskCount, "Task does not exist.");
+        Task storage task = tasks[_taskId];
+        return (task.description, task.reward, task.assignee, task.completed);
+    }
+}
